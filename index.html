@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Otis · All safe, gentlemen.</title>
+<meta name="description" content="In 1854 Elisha Otis ordered his own rope cut in front of a crowd. The platform fell a few inches and stopped. Cut it yourself." />
+<link rel="icon" href="data:," />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Instrument+Serif:ital@0;1&family=Space+Mono:wght@400;700&display=swap" />
+
+<style>
+:root{
+  /* ---- Couleur ---- */
+  --bg:#0A0A0A; --surface:#2C2C2A; --text:#F5F4F0; --muted:#888780; --line:#D3D1C7;
+  --accent:#002C7B;   /* bleu royal, structurel, max 30% de surface */
+  --signal:#E11C16;   /* brique, événement, max 3% de surface */
+
+  /* ---- Typographie ---- */
+  --font-display:'Inter', sans-serif;
+  --font-body:'Inter', sans-serif;
+  --font-edito:'Instrument Serif', serif;
+  --font-mono:'Space Mono', monospace;
+
+  /* ---- Échelle : 6 pas ---- */
+  /* Le pas hero du contrat ne dépendait que de la LARGEUR. Sur un écran large
+     et court (1512x820, 1680x1050), le titre ancré en bas montait sous le
+     wordmark et se faisait couper : c'est le rejet n°3 du catalogue. Le pas
+     tient maintenant compte de la hauteur. Amendement proposé à 00-tokens.md. */
+  --step-hero: clamp(3.5rem, min(10vw, 15vh), 12rem);
+  --step-h2:   clamp(2rem, 5vw, 4.5rem);
+  --step-h3:   clamp(1.4rem, 2.5vw, 2.25rem);
+  --step-body: clamp(1rem, 1.15vw, 1.25rem);
+  --step-small:0.875rem;
+  --step-label:0.75rem;
+
+  /* ---- Rayons : 3 ---- */
+  --r-0:0; --r-1:4px; --r-pill:999px;
+
+  /* ---- Durées hors film : 2 ---- */
+  --t-fast:0.25s; --t-slow:0.75s;
+
+  /* ---- Easing hors film : 1 ---- */
+  --ease:cubic-bezier(0.16,1,0.3,1);
+
+  /* ---- Ombre : 1 ---- */
+  --shadow:0 24px 48px rgba(0,0,0,0.35);
+
+  --grain-opacity:0.05;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--bg)}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:var(--font-body); font-size:var(--step-body);
+  line-height:1.45; -webkit-font-smoothing:antialiased; overflow-x:clip;
+}
+img{display:block;max-width:100%;height:auto}
+button,input{font:inherit;color:inherit}
+::selection{background:var(--signal);color:var(--text)}
+
+/* ===================== HUD fixe ===================== */
+.hud{
+  position:fixed; inset:0 0 auto 0; z-index:40;
+  display:flex; align-items:center; gap:24px;
+  padding:22px clamp(18px,4vw,52px); pointer-events:none;
+}
+.hud a,.hud span{pointer-events:auto}
+.mark{display:flex;align-items:center;gap:14px;text-decoration:none;color:var(--text)}
+.wm{display:block;width:clamp(72px,7.4vw,104px);height:auto;color:var(--text)}
+.hud .meta{
+  font-family:var(--font-mono); font-size:var(--step-label);
+  letter-spacing:0.16em; text-transform:uppercase; color:var(--muted);
+  text-align:right; white-space:nowrap;
+}
+.hud .rule{flex:1 1 auto;height:1px;background:var(--line);opacity:0.18}
+
+/* ===================== Le film ===================== */
+#film{position:relative;height:calc(100vh + 4200px)}
+#stage{
+  position:relative; height:100vh; min-height:600px;
+  overflow:hidden; isolation:isolate; background:var(--bg);
+}
+#plate{position:absolute;inset:0;width:100%;height:100%;display:block}
+.world{position:absolute;inset:0}
+.grain{
+  position:absolute; inset:0; z-index:30; pointer-events:none;
+  opacity:var(--grain-opacity); mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/></filter><rect width='140' height='140' filter='url(%23g)'/></svg>");
+}
+.vign{
+  position:absolute; inset:0; z-index:29; pointer-events:none;
+  background:radial-gradient(ellipse at 50% 46%, rgba(10,10,10,0) 38%, rgba(10,10,10,0.82) 100%);
+}
+
+/* ---- blocs de chapitre : lanes fixes, jamais deux à l'écran ---- */
+.blk{position:absolute;z-index:20;will-change:transform}
+.kick{
+  display:block; margin-bottom:1.1em;
+  font-family:var(--font-mono); font-size:var(--step-label);
+  letter-spacing:0.18em; text-transform:uppercase; color:var(--muted);
+}
+.blk h1{
+  font-family:var(--font-display); font-size:var(--step-hero); font-weight:900;
+  line-height:0.9; letter-spacing:-0.035em; text-wrap:balance;
+}
+.blk h2{
+  font-family:var(--font-display); font-size:var(--step-h2); font-weight:900;
+  line-height:0.94; letter-spacing:-0.03em; text-wrap:balance;
+}
+.blk p{margin-top:1.1em;max-width:34ch;color:var(--muted);font-size:var(--step-body)}
+.blk em{font-family:var(--font-edito);font-style:italic;font-weight:400;color:var(--text)}
+
+#b1{left:clamp(18px,4vw,52px);bottom:10vh;width:min(74vw,1020px)}
+#b1 h1{font-size:var(--step-hero)}
+#b1 p{max-width:44ch}
+#b2{right:clamp(18px,4vw,52px);top:22vh;width:min(38vw,520px);text-align:right}
+#b2 p{margin-left:auto}
+#b3{left:clamp(18px,4vw,52px);bottom:14vh;width:min(44vw,600px)}
+/* 04 · R1 impose un bloc épinglé court : deux lignes plus une accroche. */
+#b4{left:clamp(18px,4vw,52px);top:11vh;width:min(46vw,620px)}
+#b4 h2{font-size:var(--step-h3)}
+
+/* ---- bouton, primitive unique ---- */
+.btn{
+  display:inline-flex; align-items:center; gap:0.9em;
+  font-family:var(--font-mono); font-size:var(--step-label);
+  letter-spacing:0.15em; text-transform:uppercase;
+  padding:1.15em 2em; border:1px solid var(--line); border-radius:var(--r-0);
+  background:transparent; color:var(--text); cursor:pointer;
+  transition:background var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.btn:hover{background:var(--text);color:var(--bg)}
+.btn--signal{background:var(--signal);border-color:var(--signal)}
+.btn--signal:hover{background:var(--text);color:var(--bg)}
+:focus-visible{outline:2px solid var(--signal);outline-offset:3px}
+
+/* ===================== 05 · Banc d'essai ===================== */
+.bench{
+  position:absolute; z-index:22; will-change:transform;
+  left:clamp(18px,4vw,52px); right:clamp(18px,4vw,52px);
+  top:38vh; bottom:5vh;
+  display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);
+  grid-template-rows:auto minmax(84px,1fr) auto;
+  border:1px solid var(--line); background:var(--bg); box-shadow:var(--shadow);
+}
+.bench-head{
+  grid-column:1 / -1; display:flex; flex-wrap:wrap; align-items:baseline; gap:0.4em 1.4em;
+  padding:clamp(14px,2vh,26px) clamp(16px,2.4vw,34px);
+  border-bottom:1px solid var(--line);
+}
+.bench-head h2{
+  font-family:var(--font-display); font-size:var(--step-h3); font-weight:900;
+  letter-spacing:-0.02em; line-height:1;
+}
+.bench-head p{color:var(--muted);font-size:var(--step-small);max-width:46ch}
+.rig{
+  grid-column:1 / -1; position:relative; min-height:0;
+  border-bottom:1px solid var(--line); background:var(--bg);
+}
+#rig{position:absolute;inset:0;width:100%;height:100%;display:block}
+.ctrl{padding:clamp(12px,2vh,22px) clamp(16px,2.4vw,34px);border-right:1px solid var(--line)}
+.ctrl .row{padding:0 0 clamp(10px,1.8vh,18px)}
+.ctrl .row + .row{padding-top:clamp(10px,1.8vh,18px);border-top:1px solid var(--line)}
+.ctrl label{
+  display:flex; justify-content:space-between; align-items:baseline; gap:1em;
+  font-family:var(--font-mono); font-size:var(--step-label);
+  letter-spacing:0.14em; text-transform:uppercase; color:var(--muted);
+}
+.ctrl label b{color:var(--text);font-weight:700;font-family:var(--font-mono)}
+input[type=range]{
+  -webkit-appearance:none; appearance:none; width:100%; margin-top:0.7em;
+  height:22px; background:transparent; cursor:pointer;
+}
+input[type=range]::-webkit-slider-runnable-track{height:2px;background:var(--line);border-radius:var(--r-1)}
+input[type=range]::-moz-range-track{height:2px;background:var(--line);border-radius:var(--r-1)}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; appearance:none; width:16px; height:16px; margin-top:-7px;
+  border-radius:var(--r-pill); background:var(--text); border:1px solid var(--bg); cursor:pointer;
+}
+input[type=range]::-moz-range-thumb{
+  width:16px; height:16px; border-radius:var(--r-pill);
+  background:var(--text); border:1px solid var(--bg); cursor:pointer;
+}
+.ctrl .go{margin-top:clamp(10px,1.8vh,18px)}
+.read{padding:clamp(12px,2vh,22px) clamp(16px,2.4vw,34px);display:flex;flex-direction:column}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--line);flex:1 1 auto}
+.cell{background:var(--bg);padding:clamp(8px,1.4vh,16px) clamp(8px,1vw,14px);display:flex;flex-direction:column;justify-content:center}
+.cell dt{
+  font-family:var(--font-mono); font-size:var(--step-label);
+  letter-spacing:0.12em; text-transform:uppercase; color:var(--muted);
+}
+.cell dd{
+  margin-top:0.4em; font-family:var(--font-mono); font-weight:700;
+  font-size:var(--step-h3); line-height:1; letter-spacing:-0.02em;
+}
+.cell dd u{font-size:var(--step-label);text-decoration:none;color:var(--muted);letter-spacing:0.1em}
+.cell--key dd{color:var(--signal)}
+.note{
+  margin-top:clamp(10px,1.6vh,18px); color:var(--muted);
+  font-size:var(--step-small); max-width:52ch;
+}
+.note b{color:var(--text);font-weight:700}
+
+/* ===================== 06 · Registre ===================== */
+.ledger{
+  position:absolute; z-index:24; inset:0; will-change:transform;
+  background:var(--bg); border-top:1px solid var(--line);
+  display:grid; grid-template-rows:auto 1fr auto;
+  padding:clamp(74px,11vh,120px) clamp(18px,4vw,52px) clamp(18px,3vh,34px);
+  overflow:hidden;
+}
+.ledger h2{
+  font-family:var(--font-display); font-size:var(--step-h2); font-weight:900;
+  line-height:0.94; letter-spacing:-0.03em;
+}
+.ledger h2 em{font-family:var(--font-edito);font-style:italic;font-weight:400}
+.rec{
+  display:grid; grid-template-columns:max-content minmax(0,1fr);
+  gap:0.95em clamp(18px,2.8vw,48px); align-content:start;
+  margin-top:clamp(14px,2.4vh,30px); overflow:auto;
+}
+.rec dt{
+  font-family:var(--font-mono); font-weight:700; font-size:var(--step-body);
+  letter-spacing:0.06em; color:var(--signal);
+}
+.rec dd{font-size:var(--step-body);color:var(--muted);line-height:1.4}
+.rec dd b{color:var(--text);font-weight:500}
+.foot{
+  display:flex; flex-wrap:wrap; align-items:flex-start;
+  gap:clamp(10px,1.6vw,28px); padding-top:clamp(14px,2.2vh,26px);
+  border-top:1px solid var(--line);
+}
+.foot > div{flex:1 1 clamp(150px,17vw,240px);min-width:0}
+.foot h3{
+  font-family:var(--font-mono); font-size:var(--step-label); font-weight:700;
+  letter-spacing:0.14em; text-transform:uppercase; color:var(--muted);
+}
+.foot ul{list-style:none;margin-top:0.7em}
+.foot li{font-size:var(--step-small);line-height:1.7}
+.foot a{color:var(--text);text-decoration:none;border-bottom:1px solid transparent;
+  transition:border-color var(--t-fast) var(--ease)}
+.foot a:hover{border-bottom-color:var(--line)}
+.sign{
+  flex:1 1 100%; display:flex; flex-wrap:wrap; justify-content:space-between;
+  align-items:flex-end; gap:0.6em 1.6em; padding-top:clamp(12px,2vh,24px);
+}
+.sign p{font-family:var(--font-edito);font-style:italic;font-size:var(--step-h3);line-height:1}
+.sign small{
+  font-family:var(--font-mono); font-size:var(--step-label);
+  letter-spacing:0.06em; color:var(--muted); max-width:58ch; line-height:1.7;
+}
+
+/* ===================== Étroit ===================== */
+@media (max-width:760px){
+  .hud .meta{display:none}
+}
+@media (max-width:900px){
+  #b1,#b3{width:min(88vw,620px)}
+  #b2{width:min(78vw,460px)}
+  #b4{width:min(84vw,560px)}
+  .bench{grid-template-columns:minmax(0,1fr);top:38vh;bottom:4vh}
+  .ctrl{border-right:0;border-bottom:1px solid var(--line)}
+  .rig{display:none}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .foot > div{flex:1 1 42%}
+}
+@media (max-width:560px){
+  #b1 h1{font-size:var(--step-h2)}
+  .bench{top:40vh}
+  .bench-head p{display:none}
+  .note{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none}
+}
+</style>
+</head>
+
+<body>
+
+<header class="hud">
+  <a class="mark" href="#film" aria-label="Otis, home">
+    <svg class="wm" viewBox="0 0 75.668789 24.765166" role="img" aria-label="Otis" focusable="false"><g transform="translate(-64.219176,-321.65908)"><g transform="matrix(0.35277778,0,0,0.35277778,60.494519,317.91256)" fill="currentColor"><path d="m 56.3125,13.75 c -2.422266,-0.03516 -4.85625,0.08125 -7.25,0.3125 C 36.7125,15.7 25.087499,23.1125 19.25,34.25 9.4625,52.7 12.39375,78.693748 29.21875,92.15625 c 9.2375,7.4875 21.712502,9.3375 33.25,8 C 72.59375,99.18125 82.212497,93.924997 88.5,85.9375 96.0125,76.65 98.650003,64.175 97.5625,52.4375 96.6,38.9625 89.475,25.33125 77.1875,18.96875 70.83125,15.3125 63.579297,13.855469 56.3125,13.75 Z m -0.90625,20.15625 c 5.036626,-0.0486 10.154687,2.265625 12.9375,6.53125 4.537498,6.549999 4.95,15.05625 4,22.71875 -0.537502,5.174998 -2.775,10.23125 -6.625,13.78125 C 59.993752,81.974997 50.3625,81.7125 45.0625,76.125 38.837501,70.062503 38.4,60.59375 39.0625,52.46875 39.575,44.693748 43.86875,36.2875 51.96875,34.3125 c 1.125,-0.269531 2.275202,-0.395035 3.4375,-0.40625 z"/><path d="m 173.8,17.77 c 7.46,-6.65 18.18,-7.47 27.68,-6.35 4.83,0.89 9.76,2.33 13.57,5.57 4.62,3.65 6.57,9.63 6.98,15.31 -6.21,0 -12.42,-0.03 -18.63,0.03 -0.65,-7.46 -11.2,-9.14 -16.05,-4.79 -1.88,2.46 -0.08,5.57 2.52,6.51 9.56,4.08 20.9,3.97 29.27,10.76 4.96,3.93 6.18,10.77 5.25,16.73 -0.55,6.01 -4.44,11.39 -9.68,14.25 -7.05,4.26 -15.57,4.93 -23.61,4.53 -6.93,-0.34 -13.98,-2.46 -19.28,-7.06 -4.59,-4.02 -6.88,-10.19 -6.88,-16.21 6.63,-0.14 13.26,-0.16 19.89,0.01 0.58,2.92 1.13,6.45 4.19,7.82 5.36,2.61 14.57,2.24 16.01,-4.91 -0.7,-1.24 -0.99,-2.89 -2.38,-3.57 -9.68,-5 -21.65,-4.86 -30.31,-11.95 -7.5,-6.94 -5.73,-20.13 1.46,-26.68 z"/><path d="m 78.19,12.62 c 19.24,-0.09 38.48,-0.05 57.73,-0.02 -0.06,5.53 -0.02,11.06 -0.03,16.59 -6.26,0.02 -12.51,-0.12 -18.76,0.08 -0.29,16.59 0.14,33.2 -0.22,49.78 -6.63,-0.06 -13.25,0.09 -19.87,-0.1 C 96.83,62.38 97.06,45.8 96.92,29.22 90.69,29.14 84.45,29.18 78.21,29.19 78.32,23.67 78.32,18.14 78.19,12.62 Z"/><path d="m 140.85,12.58 c 6.67,-0.04 13.36,0.04 20.03,-0.05 0.12,22.15 0.21,44.33 0.04,66.48 -6.71,0 -13.41,0.16 -20.11,-0.11 0.05,-22.11 -0.02,-44.21 0.04,-66.32 z"/></g></g></svg>
+  </a>
+  <span class="rule" aria-hidden="true"></span>
+  <span class="meta">New York · Crystal Palace · May 21, 1854</span>
+</header>
+
+<section id="film" aria-label="The 1854 demonstration, scrubbed by scroll">
+  <div id="stage">
+    <canvas id="plate" aria-hidden="true"></canvas>
+    <div class="world">
+
+      <article class="blk" id="b1">
+        <span class="kick">// 01 · the rope</span>
+        <h1>Every elevator asks you to trust a rope.</h1>
+        <p>One man answered that question in public, once, and never had to answer it again. Descend.</p>
+      </article>
+
+      <article class="blk" id="b2">
+        <span class="kick">// 02 · the cut</span>
+        <h2>He ordered the rope <em>cut</em>.</h2>
+        <p>Not a model. Not a diagram. His own platform, his own weight, a crowd underneath and an axe above.</p>
+      </article>
+
+      <article class="blk" id="b3">
+        <span class="kick">// 03 · a few inches</span>
+        <h2>It fell four inches and stopped.</h2>
+        <p>Keep going. It will not fall any further, however hard you push. That is the entire product.</p>
+      </article>
+
+      <article class="blk" id="b4">
+        <span class="kick">// 04 · the vertical city</span>
+        <h2>The same catch, 2.5 million times.</h2>
+        <p>Otis holds the largest installed base on earth, and it moves 2.5 billion people a day.</p>
+      </article>
+
+      <section class="bench" id="bench" data-outil aria-label="The 1853 test bench">
+        <div class="bench-head">
+          <span class="kick">// 05 · the 1853 test bench</span>
+          <h2>Cut the rope yourself.</h2>
+          <p>Load the car, set its rated speed, trip the governor. The numbers are the real ones.</p>
+        </div>
+
+        <div class="rig"><canvas id="rig" aria-hidden="true"></canvas></div>
+
+        <div class="ctrl">
+          <div class="row">
+            <label for="load">Car load <b><span id="loadv">900</span> kg</b></label>
+            <input type="range" id="load" min="200" max="2000" step="50" value="900"
+                   aria-label="Car load in kilograms" />
+          </div>
+          <div class="row">
+            <label for="speed">Rated speed <b><span id="speedv">2.5</span> m/s</b></label>
+            <input type="range" id="speed" min="1" max="10" step="0.5" value="2.5"
+                   aria-label="Rated speed in metres per second" />
+          </div>
+          <div class="go">
+            <button class="btn btn--signal" id="cut" type="button">Cut the rope</button>
+          </div>
+        </div>
+
+        <div class="read">
+          <dl class="grid">
+            <div class="cell"><dt>Free fall</dt><dd><span id="o1">421</span> <u>mm</u></dd></div>
+            <div class="cell"><dt>Gear travel</dt><dd><span id="o2">602</span> <u>mm</u></dd></div>
+            <div class="cell cell--key"><dt>Total drop</dt><dd><span id="o3">1023</span> <u>mm</u></dd></div>
+            <div class="cell"><dt>Time to stop</dt><dd><span id="o4">712</span> <u>ms</u></dd></div>
+            <div class="cell"><dt>Retardation</dt><dd><span id="o5">0.70</span> <u>g</u></dd></div>
+            <div class="cell"><dt>Rail grip</dt><dd><span id="o6">15.0</span> <u>kN</u></dd></div>
+          </dl>
+          <p class="note"><b>The drop does not change with load.</b> Move the load from 200 to 2000 kg and the millimetres hold. What changes is the force the safety gear has to develop against the rail.</p>
+        </div>
+      </section>
+
+      <section class="ledger" id="ledger" aria-label="The record">
+        <h2>The record, <em>unabridged</em>.</h2>
+
+        <dl class="rec">
+          <dt>1853</dt><dd>Elisha Graves Otis invents the elevator safety brake and sells his first elevator. <b>Otis Elevator Company founded, September 20.</b></dd>
+          <dt>1854</dt><dd>New York Crystal Palace. Standing on a platform lift above the crowd, he orders the retaining rope cut. The platform drops a few inches; the brake halts the descent. <b>“All safe, gentlemen, all safe.”</b></dd>
+          <dt>1857</dt><dd>First passenger elevator installed.</dd>
+          <dt>1861</dt><dd>Elisha Otis dies at 49.</dd>
+          <dt>1931</dt><dd>Empire State Building. <b>61 passenger elevators and 6 freight elevators.</b></dd>
+          <dt>2010</dt><dd>Burj Khalifa. <b>65 Otis elevators and 8 escalators.</b></dd>
+          <dt>2023</dt><dd>170 years of business.</dd>
+          <dt>Today</dt><dd><b>$14.4B</b> net sales · <b>~2.5M</b> units serviced · <b>2.5B</b> people moved daily.</dd>
+        </dl>
+
+        <div class="foot">
+          <div>
+            <h3>Products &amp; services</h3>
+            <ul>
+              <li><a href="https://www.otis.com/en/us">Elevator products</a></li>
+              <li><a href="https://www.otis.com/en/us">Escalators &amp; moving walks</a></li>
+              <li><a href="https://www.otis.com/en/us">Signature Service</a></li>
+              <li><a href="https://www.otis.com/en/us">Modernization</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3>Tools &amp; resources</h3>
+            <ul>
+              <li><a href="https://www.otis.com/en/us">Resource library</a></li>
+              <li><a href="https://www.otis.com/en/us">Passenger experience</a></li>
+              <li><a href="https://www.otis.com/en/us">Safety information</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3>Our company</h3>
+            <ul>
+              <li><a href="https://www.otis.com/en/us/our-company/history">History</a></li>
+              <li><a href="https://www.otis.com/en/us">Leadership</a></li>
+              <li><a href="https://www.otis.com/en/us">Newsroom</a></li>
+              <li><a href="https://www.otis.com/en/us">Careers</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3>Otisline</h3>
+            <ul>
+              <li><a href="tel:+18002336847">(800) 233-6847</a></li>
+              <li>1 Carrier Place</li>
+              <li>Farmington, CT 06032</li>
+            </ul>
+          </div>
+
+          <div class="sign">
+            <p>All safe, gentlemen.</p>
+            <small>Unsolicited concept redesign, not affiliated with or endorsed by Otis Worldwide Corporation. Every figure and quotation is taken from otis.com. Concept and build: Dondi Santeme, Groupe SD.</small>
+          </div>
+        </div>
+      </section>
+
+    </div>
+    <div class="vign" aria-hidden="true"></div>
+    <div class="grain" aria-hidden="true"></div>
+  </div>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.18/dist/lenis.min.js"></script>
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   Le film. UNE tête de lecture. Tout le rendu est une fonction
+   pure de p ∈ [0,1] : rien ne s'accumule, tout est réversible.
+   ============================================================ */
+
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const seg  = (p,a,b)=>Math.max(0,Math.min(1,(p-a)/(b-a)));
+const lerp = (a,b,t)=>a+(b-a)*t;
+
+/* ---- couleurs lues sur les tokens : le canvas reste dans le contrat ---- */
+const css = getComputedStyle(document.documentElement);
+const TOK = {
+  text:   css.getPropertyValue('--text').trim()   || '#F5F4F0',
+  line:   css.getPropertyValue('--line').trim()   || '#D3D1C7',
+  muted:  css.getPropertyValue('--muted').trim()  || '#888780',
+  accent: css.getPropertyValue('--accent').trim() || '#002C7B',
+  signal: css.getPropertyValue('--signal').trim() || '#E11C16',
+  bg:     css.getPropertyValue('--bg').trim()     || '#0A0A0A'
+};
+const hex2rgb = h => {
+  h = h.replace('#','');
+  if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+  return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];
+};
+const rgba = (hex,a)=>{const c=hex2rgb(hex);return 'rgba('+c[0]+','+c[1]+','+c[2]+','+a+')';};
+
+/* ---- la foule de 1854 ---- */
+const crowd = new Image();
+let crowdOk = false;
+crowd.onload = ()=>{ crowdOk = true; render(lastP); };
+crowd.src = 'img/otis-1854.jpg';
+
+/* ---- géométrie du monde (px monde, origine = plateforme au repos) ---- */
+const RG        = 170;   // demi-écartement des rails
+const PITCH_A   = 64;    // pas des crans, 1854
+const PITCH_B   = 22;    // pas des crans, aujourd'hui
+const ROPE_W    = 5;     // largeur de la corde, 7 torons dedans
+const CUT_Y     = -330;  // hauteur de la coupe
+const DROP_PX   = 163;   // 96 mm à 1,7 px/mm
+const STRANDS   = 7;
+const FLOORS = [
+  '2.5 BILLION PEOPLE MOVED DAILY',
+  '~2.5 MILLION UNITS SERVICED',
+  'EMPIRE STATE BUILDING · 1931 · 61 + 6',
+  'BURJ KHALIFA · 2010 · 65 OTIS UNITS',
+  '$14.4B NET SALES',
+  'THE LARGEST INSTALLED BASE ON EARTH'
+];
+
+const plate = document.getElementById('plate');
+const pctx  = plate.getContext('2d');
+const stage = document.getElementById('stage');
+let W=0,H=0,DPR=1,lastP=0;
+
+function sizePlate(){
+  DPR = Math.min(window.devicePixelRatio||1, 2);
+  const r = plate.getBoundingClientRect();
+  W = Math.max(1, Math.round(r.width));
+  H = Math.max(1, Math.round(r.height));
+  plate.width  = Math.round(W*DPR);
+  plate.height = Math.round(H*DPR);
+  pctx.setTransform(DPR,0,0,DPR,0,0);
+}
+
+/* ============================================================
+   Le tracé. Une planche de brevet : que des filets d'un pixel.
+   Rien n'apparaît jamais, c'est l'échelle qui révèle.
+   ============================================================ */
+function drawPlate(p){
+  const ctx = pctx;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = TOK.bg;
+  ctx.fillRect(0,0,W,H);
+
+  /* ---------- caméra ---------- */
+  /* La caméra ressort AVANT la chute (0.30 → 0.40), sinon le visiteur ne voit
+     jamais la plateforme tomber et le critère 3 devient invérifiable. */
+  const pullOut = seg(p,0.24,0.31);
+  let z = lerp(1, 5.6, seg(p,0.09,0.23));
+  z = lerp(z, 1, pullOut);
+  let focusY = lerp(0,-120,seg(p,0,0.09)) + lerp(0,-210,seg(p,0.09,0.23));
+  focusY = lerp(focusY, 0, pullOut);
+
+  const cx = W/2, cy = H*0.52;
+  const sx = wx => cx + wx*z;
+  const sy = wy => cy + (wy - focusY)*z;
+
+  /* ---------- la foule de 1854 : sort par alpha au R6 ---------- */
+  /* Le grade est le levier anti-collage : la gravure est enfoncée dans le même
+     noir que le tracé, sinon elle se lit comme une pièce rapportée et le trait
+     d'un pixel disparaît sous elle. */
+  const crowdA = lerp(0.16, 0, seg(p,0.50,0.62)) * (1 - seg(p,0.86,0.94));
+  if (crowdOk && crowdA > 0.004){
+    const s = lerp(1.00,1.18,seg(p,0,0.14)) * Math.max(1, z*0.55);
+    const iw = W*1.16*s, ih = iw*(crowd.height/crowd.width);
+    ctx.save();
+    ctx.globalAlpha = crowdA;
+    ctx.filter = 'grayscale(1) contrast(1.35) brightness(0.62)';
+    ctx.drawImage(crowd, cx-iw/2, cy-ih*0.56 - focusY*0.12*z, iw, ih);
+    ctx.restore();
+  }
+
+  /* ---------- la plateforme et sa chute ---------- */
+  const dropMM = lerp(0, 96, seg(p,0.30,0.40));
+  const dy     = (dropMM/96) * DROP_PX;
+  const bitten = p >= 0.40;
+  const platY  = dy;
+
+  /* ---------- les rails et leurs crans ---------- */
+  const pitch = lerp(PITCH_A, PITCH_B, seg(p,0.50,0.62));
+  const plateLen = lerp(18, RG*1.9, seg(p,0.50,0.62));
+  const nearOff = 1400*0.46*seg(p,0.64,0.82);
+  const farOff  = 1400*0.14*seg(p,0.64,0.82);
+
+  ctx.lineWidth = 1;
+
+  /* couche lointaine : trame, deux fois et demie plus lente */
+  ctx.strokeStyle = rgba(TOK.line, 0.11);
+  ctx.beginPath();
+  const fp = pitch*2.6;
+  for (let wy = -6000; wy < 6000; wy += fp){
+    const y = sy(wy + (farOff % fp));
+    if (y < -40 || y > H+40) continue;
+    ctx.moveTo(sx(-RG*2.4), y); ctx.lineTo(sx(RG*2.4), y);
+  }
+  ctx.stroke();
+
+  /* les deux rails */
+  ctx.strokeStyle = rgba(TOK.line, 0.58);
+  ctx.beginPath();
+  ctx.moveTo(sx(-RG), -20); ctx.lineTo(sx(-RG), H+20);
+  ctx.moveTo(sx( RG), -20); ctx.lineTo(sx( RG), H+20);
+  ctx.stroke();
+
+  /* les crans, plus les plaques de plancher tous les huit */
+  const step = pitch;
+  const first = Math.floor((-6000 + (nearOff % step))/step)*step;
+  ctx.font = '700 ' + Math.max(7, 11*Math.min(z,1.6)) + 'px "Space Mono", monospace';
+  ctx.textBaseline = 'middle';
+  let fi = 0;
+  for (let k = 0; k < 480; k++){
+    const wy = first + k*step + (nearOff % step);
+    if (wy > 6000) break;
+    const y = sy(wy);
+    if (y < -60 || y > H+60) continue;
+    const isPlate = ((Math.round(wy/step) % 8) + 8) % 8 === 0;
+    const len = isPlate ? plateLen : 18;
+
+    ctx.strokeStyle = rgba(TOK.line, isPlate ? 0.46 : 0.27);
+    ctx.beginPath();
+    ctx.moveTo(sx(-RG), y);        ctx.lineTo(sx(-RG + len), y);
+    ctx.moveTo(sx( RG), y);        ctx.lineTo(sx( RG - len), y);
+    ctx.stroke();
+
+    /* le texte du plancher est là depuis toujours : sa taille suit la plaque */
+    if (isPlate && plateLen > 40 && W > 760){
+      const a = Math.min(1,(plateLen-40)/180) * 0.66;
+      ctx.fillStyle = rgba(TOK.muted, a);
+      ctx.save();
+      ctx.font = '400 ' + Math.max(6, 10*Math.min(z,1.4)) + 'px "Space Mono", monospace';
+      ctx.fillText(FLOORS[fi % FLOORS.length], sx(-RG + 14), y - 12);
+      ctx.restore();
+    }
+    if (isPlate) fi++;
+  }
+
+  /* ---------- la corde à sept torons ---------- */
+  const ropeW = ROPE_W;
+  const hitchW = platY - 14;
+  const gap = ropeW/(STRANDS-1);
+  const expandT = seg(p,0.24,0.30);
+  const exitT   = seg(p,0.28,0.35);
+  const bundleW = lerp(1, Math.max(1,(W*1.05)/Math.max(1,ropeW*z)), expandT);
+  const bundleH = 1 + 0.52*exitT;
+
+  /* Le brin libéré se DÉCROCHE du monde en 0.23 → 0.27 : sinon son ancrage suit
+     la caméra qui recule, il quitte le cadre avant d'avoir été vu, et le raccord
+     le plus spectaculaire de la banque ne se voit pas. Ancré à mi-écran, les
+     torons remplissent tout le haut du cadre, puis sortent par le haut. */
+  const bundleAnchor = lerp(
+    lerp(sy(CUT_Y), H*0.52, seg(p,0.23,0.27)),
+    -H*0.75, exitT);
+
+  /* Brins au-dessus de la coupe : c'est eux qui font le R4.
+     On calcule les X à la main plutôt que par ctx.scale : une échelle non
+     uniforme multiplie AUSSI l'épaisseur du trait, et à 302× le filet d'un
+     pixel devient une barre de 180 px. */
+  ctx.save();
+  ctx.strokeStyle = rgba(TOK.line, 0.72);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let i=0;i<STRANDS;i++){
+    const wx  = -ropeW/2 + i*gap;
+    const cut = seg(p, 0.195 + i*0.0045, 0.205 + i*0.0045);
+    const x0  = sx(0) + wx*z*bundleW;
+    const tip = bundleAnchor - cut*26*bundleH;
+    const curl = cut * (9 + i*3) * (i%2 ? 1 : -1) * Math.max(1, Math.min(2.2, bundleW*0.02));
+    ctx.moveTo(x0, tip - H*3.5*bundleH);
+    ctx.lineTo(x0, tip);
+    ctx.lineTo(x0 + curl, tip - cut*30*bundleH);
+  }
+  ctx.stroke();
+  ctx.restore();
+
+  /* brins sous la coupe : ils descendent avec la plateforme */
+  ctx.save();
+  ctx.strokeStyle = rgba(TOK.line, 0.66);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let i=0;i<STRANDS;i++){
+    const wx = -ropeW/2 + i*gap;
+    const cut = seg(p, 0.195 + i*0.0045, 0.205 + i*0.0045);
+    const slack = cut * (18 + i*4);
+    const curl  = cut * (9 + i*2) * (i%2 ? -1 : 1);
+    ctx.moveTo(sx(wx) + curl, sy(CUT_Y) + slack);
+    ctx.lineTo(sx(wx), sy(hitchW));
+  }
+  ctx.stroke();
+  ctx.restore();
+
+  /* ---------- la plateforme, ses mâchoires ---------- */
+  const py = sy(platY);
+  ctx.strokeStyle = rgba(TOK.text, 0.82);
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(sx(-RG+2), py);
+  ctx.lineTo(sx( RG-2), py);
+  ctx.moveTo(sx(-RG+2), py); ctx.lineTo(sx(-RG*0.62), py + 16*z);
+  ctx.moveTo(sx( RG-2), py); ctx.lineTo(sx( RG*0.62), py + 16*z);
+  ctx.lineTo(sx(-RG*0.62), py + 16*z);
+  ctx.stroke();
+
+  /* le montant et l'étrier */
+  ctx.strokeStyle = rgba(TOK.text, 0.55);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(sx(0), py); ctx.lineTo(sx(0), sy(hitchW));
+  ctx.moveTo(sx(-30), sy(hitchW)); ctx.lineTo(sx(30), sy(hitchW));
+  ctx.stroke();
+
+  /* mâchoires : toujours là, elles changent d'état, elles n'apparaissent pas */
+  const bite = seg(p,0.395,0.410);
+  ctx.strokeStyle = bite > 0 ? rgba(TOK.signal, 0.35 + 0.65*bite) : rgba(TOK.line,0.5);
+  ctx.lineWidth = lerp(1, 2.2, bite);
+  const jw = lerp(9, 15, bite);
+  ctx.beginPath();
+  ctx.moveTo(sx(-RG), py - jw*0.5*z/Math.max(z,1)); ctx.lineTo(sx(-RG+jw), py);
+  ctx.moveTo(sx(-RG), py + jw*0.5*z/Math.max(z,1)); ctx.lineTo(sx(-RG+jw), py);
+  ctx.moveTo(sx( RG), py - jw*0.5*z/Math.max(z,1)); ctx.lineTo(sx( RG-jw), py);
+  ctx.moveTo(sx( RG), py + jw*0.5*z/Math.max(z,1)); ctx.lineTo(sx( RG-jw), py);
+  ctx.stroke();
+
+  /* ---------- l'instrumentation, tracée dans la planche ---------- */
+  if (p > 0.285 && p < 0.60){
+    const a = Math.min(1, seg(p,0.285,0.32)) * (1 - seg(p,0.55,0.60));
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = bitten ? TOK.signal : TOK.text;
+    ctx.font = '700 28px "Space Mono", monospace';
+    ctx.fillText(Math.round(dropMM) + ' mm', sx(RG) + 26, py + 8);
+    ctx.fillStyle = rgba(TOK.muted, 0.9);
+    ctx.font = '400 10px "Space Mono", monospace';
+    ctx.fillText(bitten ? 'SAFETY GEAR SET' : 'FREE FALL', sx(RG) + 26, py + 26);
+    /* la cote de chute */
+    ctx.strokeStyle = rgba(TOK.muted, 0.4);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(sx(RG) + 14, sy(0)); ctx.lineTo(sx(RG) + 14, py);
+    ctx.moveTo(sx(RG) + 8,  sy(0)); ctx.lineTo(sx(RG) + 20, sy(0));
+    ctx.moveTo(sx(RG) + 8,  py);    ctx.lineTo(sx(RG) + 20, py);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /* ---------- l'aplomb structurel, seul emploi du bleu royal ---------- */
+  ctx.strokeStyle = rgba(TOK.accent, 0.85);
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(sx(0), 0); ctx.lineTo(sx(0), Math.max(0, sy(CUT_Y)));
+  ctx.stroke();
+}
+
+/* ============================================================
+   Les blocs de chapitre : lanes fixes, jamais deux en même temps.
+   ============================================================ */
+const b1 = document.getElementById('b1');
+const b2 = document.getElementById('b2');
+const b3 = document.getElementById('b3');
+const b4 = document.getElementById('b4');
+const bench  = document.getElementById('bench');
+const ledger = document.getElementById('ledger');
+
+function place(el, x, y){ el.style.transform = 'translate3d('+x+','+y+',0)'; }
+
+function drawDom(p){
+  place(b1, '0', lerp(0, 122, seg(p,0.08,0.16)) + 'vh');
+  place(b2, '0', (lerp(-122,0,seg(p,0.15,0.20)) + lerp(0,-122,seg(p,0.27,0.32))) + 'vh');
+  place(b3, '0', (lerp(122,0,seg(p,0.325,0.375)) + lerp(0,-122,seg(p,0.50,0.56))) + 'vh');
+  place(b4, '0', (lerp(122,0,seg(p,0.56,0.62))  + lerp(0,-122,seg(p,0.82,0.87))) + 'vh');
+  place(bench, lerp(118,0,seg(p,0.66,0.72)) + 'vw', lerp(0,-140,seg(p,0.94,0.98)) + 'vh');
+  place(ledger, '0', lerp(100,0,seg(p,0.88,0.94)) + 'vh');
+
+  /* R4 : la dégradation démarre avec l'expansion et SURVIT à la sortie du brin */
+  /* Le pic tombe juste apres la sortie du brin, et la degradation se dissipe
+     PILE quand le frein mord (0.44). Le raccord tient donc le vide entre les
+     deux plans sans jamais masquer la demonstration elle-meme. */
+  const bl = lerp(0,7,seg(p,0.26,0.32)) * (1 - seg(p,0.32,0.44));
+  if (bl > 0.02){
+    stage.style.filter = 'blur('+bl.toFixed(2)+'px) brightness('+(1-0.20*(bl/7)).toFixed(3)+')';
+  } else if (stage.style.filter){
+    stage.style.filter = '';
+  }
+}
+
+function render(p){
+  lastP = p;
+  drawPlate(p);
+  drawDom(p);
+}
+
+/* ============================================================
+   Le banc d'essai. Physique réelle, pas une animation.
+   ============================================================ */
+const G = 9.81, RET = 0.70;           // décélération moyenne du parachute progressif
+const elLoad=document.getElementById('load'), elSpeed=document.getElementById('speed');
+const rig = document.getElementById('rig'), rctx = rig.getContext('2d');
+const out = ['o1','o2','o3','o4','o5','o6'].map(i=>document.getElementById(i));
+const test = { t:0, running:false, done:false };
+
+function spec(){
+  const m = +elLoad.value, v = 1.15 * (+elSpeed.value), a = RET*G;
+  const dFree = v*v/(2*G),  tFree = v/G;
+  const dStop = v*v/(2*a),  tStop = v/a;
+  return { m, v, a, dFree, tFree, dStop, tStop,
+           total:dFree+dStop, time:(tFree+tStop), F:m*(a+G) };
+}
+function fallAt(s, t){
+  if (t <= s.tFree) return 0.5*G*t*t;
+  const u = Math.min(t - s.tFree, s.tStop);
+  return s.dFree + s.v*u - 0.5*s.a*u*u;
+}
+function writeOut(s, liveMM){
+  out[0].textContent = Math.round(s.dFree*1000);
+  out[1].textContent = Math.round(s.dStop*1000);
+  out[2].textContent = liveMM===undefined ? Math.round(s.total*1000) : Math.round(liveMM);
+  out[3].textContent = Math.round(s.time*1000);
+  out[4].textContent = RET.toFixed(2);
+  out[5].textContent = (s.F/1000).toFixed(1);
+}
+function sizeRig(){
+  const r = rig.getBoundingClientRect();
+  if (r.width < 2 || r.height < 2) return false;
+  rig.width  = Math.round(r.width*DPR);
+  rig.height = Math.round(r.height*DPR);
+  rctx.setTransform(DPR,0,0,DPR,0,0);
+  return true;
+}
+function drawRig(){
+  if (!sizeRig()) return;
+  const w = rig.getBoundingClientRect().width, h = rig.getBoundingClientRect().height;
+  const s = spec();
+  const yNow = test.running || test.done ? fallAt(s, test.t) : 0;
+  const frac = s.total > 0 ? Math.min(1, yNow/s.total) : 0;
+
+  rctx.clearRect(0,0,w,h);
+  rctx.fillStyle = TOK.bg; rctx.fillRect(0,0,w,h);
+
+  const cx = w/2, top = h*0.16, bot = h*0.84, rg = Math.min(w*0.22, 150);
+  rctx.lineWidth = 1;
+
+  /* rails et crans */
+  rctx.strokeStyle = rgba(TOK.line,0.55);
+  rctx.beginPath();
+  rctx.moveTo(cx-rg, top-14); rctx.lineTo(cx-rg, bot+14);
+  rctx.moveTo(cx+rg, top-14); rctx.lineTo(cx+rg, bot+14);
+  rctx.stroke();
+  rctx.strokeStyle = rgba(TOK.line,0.26);
+  rctx.beginPath();
+  for (let y = top-14; y < bot+14; y += 14){
+    rctx.moveTo(cx-rg, y); rctx.lineTo(cx-rg+11, y);
+    rctx.moveTo(cx+rg, y); rctx.lineTo(cx+rg-11, y);
+  }
+  rctx.stroke();
+
+  /* corde : intacte au repos, coupée dès l'essai */
+  const py = top + (bot-top)*frac;
+  rctx.strokeStyle = rgba(TOK.line, 0.72);
+  rctx.beginPath();
+  if (test.running || test.done){
+    rctx.moveTo(cx, 0); rctx.lineTo(cx, top-26);
+    rctx.moveTo(cx-4, top-20); rctx.lineTo(cx+4, top-14);
+  } else {
+    rctx.moveTo(cx, 0); rctx.lineTo(cx, py-10);
+  }
+  rctx.stroke();
+
+  /* plateforme */
+  rctx.strokeStyle = rgba(TOK.text,0.85); rctx.lineWidth = 1.4;
+  rctx.beginPath();
+  rctx.moveTo(cx-rg+3, py); rctx.lineTo(cx+rg-3, py);
+  rctx.moveTo(cx-rg+3, py); rctx.lineTo(cx-rg*0.6, py+13);
+  rctx.moveTo(cx+rg-3, py); rctx.lineTo(cx+rg*0.6, py+13);
+  rctx.lineTo(cx-rg*0.6, py+13);
+  rctx.moveTo(cx, py); rctx.lineTo(cx, py-10);
+  rctx.stroke();
+
+  /* mâchoires : rouges quand elles ont mordu */
+  const set = test.done || frac >= 1;
+  rctx.strokeStyle = set ? rgba(TOK.signal,0.95) : rgba(TOK.line,0.5);
+  rctx.lineWidth = set ? 2.2 : 1;
+  const jw = set ? 15 : 9;
+  rctx.beginPath();
+  rctx.moveTo(cx-rg, py-5); rctx.lineTo(cx-rg+jw, py);
+  rctx.moveTo(cx-rg, py+5); rctx.lineTo(cx-rg+jw, py);
+  rctx.moveTo(cx+rg, py-5); rctx.lineTo(cx+rg-jw, py);
+  rctx.moveTo(cx+rg, py+5); rctx.lineTo(cx+rg-jw, py);
+  rctx.stroke();
+
+  /* la cote et le verdict */
+  rctx.textBaseline = 'alphabetic';
+  rctx.fillStyle = set ? TOK.signal : rgba(TOK.muted,0.9);
+  rctx.font = '700 12px "Space Mono", monospace';
+  rctx.fillText(Math.round(yNow*1000) + ' mm', cx+rg+14, py+4);
+  if (set){
+    rctx.fillStyle = TOK.text;
+    rctx.font = 'italic 400 20px "Instrument Serif", serif';
+    rctx.fillText('All safe, gentlemen.', cx-rg+3, bot+34 > h-6 ? h-6 : bot+34);
+  }
+  rctx.strokeStyle = rgba(TOK.line,0.25); rctx.lineWidth = 1;
+  rctx.beginPath();
+  rctx.moveTo(cx+rg+6, top); rctx.lineTo(cx+rg+6, py);
+  rctx.moveTo(cx+rg+2, top); rctx.lineTo(cx+rg+10, top);
+  rctx.moveTo(cx+rg+2, py);  rctx.lineTo(cx+rg+10, py);
+  rctx.stroke();
+}
+
+function onInput(){
+  document.getElementById('loadv').textContent  = elLoad.value;
+  document.getElementById('speedv').textContent = (+elSpeed.value).toFixed(1);
+  gsap.killTweensOf(test);
+  test.t = 0; test.running = false; test.done = false;
+  writeOut(spec());
+  drawRig();
+}
+elLoad.addEventListener('input', onInput);
+elSpeed.addEventListener('input', onInput);
+
+document.getElementById('cut').addEventListener('click', function(){
+  const s = spec();
+  gsap.killTweensOf(test);
+  test.t = 0; test.done = false; test.running = true;
+  if (REDUCED){
+    test.t = s.time; test.running = false; test.done = true;
+    writeOut(s); drawRig(); return;
+  }
+  /* pas de timer : une interpolation linéaire du TEMPS, la courbe vient de la physique */
+  gsap.to(test, {
+    t: s.time, duration: Math.max(0.9, s.time*1.35), ease:'none',
+    onUpdate: function(){ writeOut(s, fallAt(s, test.t)*1000); drawRig(); },
+    onComplete: function(){ test.running=false; test.done=true; writeOut(s); drawRig(); }
+  });
+});
+
+/* ============================================================
+   Montage : Lenis + une seule timeline, un seul pin.
+   ============================================================ */
+gsap.registerPlugin(ScrollTrigger);
+
+if (!REDUCED && window.Lenis){
+  const lenis = new Lenis({ lerp: 0.08 });
+  lenis.on('scroll', ScrollTrigger.update);
+  gsap.ticker.add(t => lenis.raf(t*1000));
+  gsap.ticker.lagSmoothing(0);
+}
+
+const FRAMES = 1000;
+const playhead = { f: 0 };
+
+const film = gsap.timeline({
+  scrollTrigger: {
+    trigger: '#film', start: 'top top', end: 'bottom bottom',
+    scrub: true, pin: '#stage', anticipatePin: 1
+  },
+  defaults: { ease: 'none' }
+});
+
+film.to(playhead, {
+  f: FRAMES - 1, duration: 1,
+  onUpdate: () => render(playhead.f/(FRAMES-1))
+}, 0);
+
+film.addLabel('ch1',0.00).addLabel('ch2',0.14).addLabel('ch3',0.30)
+    .addLabel('ch4',0.52).addLabel('ch5',0.68).addLabel('ch6',0.88);
+
+/* ---- rite d'ouverture : l'encre descend, avant tout scroll ---- */
+function boot(){
+  sizePlate();
+  onInput();
+  render(0);
+  if (REDUCED) return;
+  const ink = { v: 0 };
+  const clip = () => { plate.style.clipPath = 'inset(0 0 ' + (100 - ink.v*100).toFixed(2) + '% 0)'; };
+  clip();
+  gsap.to(ink, { v: 1, duration: 1.2, ease:'none',
+    onUpdate: clip,
+    onComplete: () => { plate.style.clipPath = ''; } });
+}
+
+window.addEventListener('resize', () => {
+  sizePlate(); render(lastP); drawRig(); ScrollTrigger.refresh();
+});
+
+if (document.fonts && document.fonts.ready){
+  document.fonts.ready.then(() => { render(lastP); drawRig(); });
+}
+boot();
+
+})();
+</script>
+</body>
+</html>
