@@ -1004,7 +1004,9 @@ gsap.registerPlugin(ScrollTrigger);
 if (!REDUCED && window.Lenis){
   lenis = new Lenis({ lerp: 0.08 });
   lenis.on('scroll', ScrollTrigger.update);
-  gsap.ticker.add(t => lenis.raf(t*1000));
+  /* Garde : captureMode() detruit lenis en cours de route. Sans ce test, le
+     ticker appelle raf() sur null a chaque image et la page se fige. */
+  gsap.ticker.add(t => { if (lenis) lenis.raf(t*1000); });
   gsap.ticker.lagSmoothing(0);
 }
 
