@@ -114,6 +114,7 @@ button,input{font:inherit;color:inherit}
 .blk em{font-family:var(--font-edito);font-style:italic;font-weight:400;color:var(--text)}
 
 #b1{left:clamp(18px,4vw,52px);bottom:10vh;width:min(74vw,1020px)}
+@media (min-width:1100px){ #b1{width:min(46vw,640px)} }
 #b1 h1{font-size:var(--step-hero)}
 #b1 p{max-width:44ch}
 #b2{right:clamp(18px,4vw,52px);top:22vh;width:min(38vw,520px);text-align:right}
@@ -297,7 +298,7 @@ input[type=range]::-moz-range-thumb{
       <article class="blk" id="b1">
         <span class="kick">// 01 · the rope</span>
         <h1>Every elevator asks you to trust a rope.</h1>
-        <p>One man answered that question in public, once, and never had to answer it again. Descend.</p>
+        <p>This is an elevator shaft, drawn the way a patent draws it: the car, its two guide rails, the sheave, and the single rope holding all of it up. Descend, and watch what happens to the rope.</p>
       </article>
 
       <article class="blk" id="b2">
@@ -309,7 +310,7 @@ input[type=range]::-moz-range-thumb{
       <article class="blk" id="b3">
         <span class="kick">// 03 · a few inches</span>
         <h2>It fell four inches and stopped.</h2>
-        <p>Keep going. It will not fall any further, however hard you push. That is the entire product.</p>
+        <p>The safety gear has bitten into both guide rails. Keep going: the car will not drop another millimetre, however hard you push. That is the entire product.</p>
       </article>
 
       <article class="blk" id="b4">
@@ -459,7 +460,9 @@ crowd.onload = ()=>{ crowdOk = true; render(lastP); };
 crowd.src = 'img/otis-1854.jpg';
 
 /* ---- géométrie du monde (px monde, origine = plateforme au repos) ---- */
-const RG        = 170;   // demi-écartement des rails
+const RG_BASE   = 170;   // demi-écartement des rails (rétréci sur écran étroit)
+const CAR_H     = 132;   // hauteur de la cabine
+const SHEAVE_Y  = -440;  // la poulie de traction, en haut de la gaine
 const PITCH_A   = 64;    // pas des crans, 1854
 const PITCH_B   = 22;    // pas des crans, aujourd'hui
 const ROPE_W    = 5;     // largeur de la corde, 7 torons dedans
@@ -509,7 +512,14 @@ function drawPlate(p){
   let focusY = lerp(0,-120,seg(p,0,0.09)) + lerp(0,-210,seg(p,0.09,0.23));
   focusY = lerp(focusY, 0, pullOut);
 
-  const cx = W/2, cy = H*0.52;
+  /* Sur un écran étroit (la vidéo est capturée à 540), des rails à 170 px ne
+     laissent plus la place aux légendes de planche. On resserre la gaine. */
+  const RG = Math.min(RG_BASE, W*0.31);
+
+  /* Au bureau le titre geant couvrait la gaine et ses legendes devenaient
+     illisibles. La gaine se decale a droite : texte a gauche, dessin a droite,
+     grille asymetrique. En etroit elle reste centree. */
+  const cx = W >= 1100 ? W*0.655 : W/2, cy = H*0.52;
   const sx = wx => cx + wx*z;
   const sy = wy => cy + (wy - focusY)*z;
 
@@ -594,7 +604,7 @@ function drawPlate(p){
 
   /* ---------- la corde à sept torons ---------- */
   const ropeW = ROPE_W;
-  const hitchW = platY - 14;
+  const hitchW = platY - CAR_H - 16;
   const gap = ropeW/(STRANDS-1);
   const expandT = seg(p,0.24,0.30);
   const exitT   = seg(p,0.28,0.35);
@@ -646,24 +656,44 @@ function drawPlate(p){
   ctx.stroke();
   ctx.restore();
 
-  /* ---------- la plateforme, ses mâchoires ---------- */
+  /* ---------- LA CABINE ----------
+     Retour Dondi 2026-08-07 : une plateforme nue ne se lit pas comme un
+     ascenseur. On dessine une vraie cabine, parois, plafond et baie de porte :
+     la silhouette suffit à nommer l'objet avant le moindre mot. */
   const py = sy(platY);
+  const cw = RG*0.86, ch = CAR_H;
+  const roofY = sy(platY - ch);
+
   ctx.strokeStyle = rgba(TOK.text, 0.82);
   ctx.lineWidth = 1.4;
   ctx.beginPath();
-  ctx.moveTo(sx(-RG+2), py);
-  ctx.lineTo(sx( RG-2), py);
-  ctx.moveTo(sx(-RG+2), py); ctx.lineTo(sx(-RG*0.62), py + 16*z);
-  ctx.moveTo(sx( RG-2), py); ctx.lineTo(sx( RG*0.62), py + 16*z);
-  ctx.lineTo(sx(-RG*0.62), py + 16*z);
+  ctx.moveTo(sx(-cw), py);      ctx.lineTo(sx(cw), py);            // plancher
+  ctx.moveTo(sx(-cw), roofY);   ctx.lineTo(sx(cw), roofY);         // plafond
+  ctx.moveTo(sx(-cw), py);      ctx.lineTo(sx(-cw), roofY);        // parois
+  ctx.moveTo(sx( cw), py);      ctx.lineTo(sx( cw), roofY);
   ctx.stroke();
 
-  /* le montant et l'étrier */
+  /* la baie de porte : deux montants et un linteau, plus clairs que la caisse */
+  ctx.strokeStyle = rgba(TOK.line, 0.42);
+  ctx.lineWidth = 1;
+  const dw = cw*0.42, dh = ch*0.82;
+  ctx.beginPath();
+  ctx.moveTo(sx(-dw), py); ctx.lineTo(sx(-dw), sy(platY - dh));
+  ctx.moveTo(sx( dw), py); ctx.lineTo(sx( dw), sy(platY - dh));
+  ctx.moveTo(sx(-dw), sy(platY - dh)); ctx.lineTo(sx(dw), sy(platY - dh));
+  ctx.moveTo(sx(0), py); ctx.lineTo(sx(0), sy(platY - dh));        // jonction des vantaux
+  ctx.stroke();
+
+  /* le sabot sous le plancher */
   ctx.strokeStyle = rgba(TOK.text, 0.55);
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(sx(0), py); ctx.lineTo(sx(0), sy(hitchW));
-  ctx.moveTo(sx(-30), sy(hitchW)); ctx.lineTo(sx(30), sy(hitchW));
+  ctx.moveTo(sx(-cw), py); ctx.lineTo(sx(-cw*0.62), py + 15*z);
+  ctx.moveTo(sx( cw), py); ctx.lineTo(sx( cw*0.62), py + 15*z);
+  ctx.lineTo(sx(-cw*0.62), py + 15*z);
+  /* l'étrier de suspension sur le toit */
+  ctx.moveTo(sx(0), roofY); ctx.lineTo(sx(0), sy(hitchW));
+  ctx.moveTo(sx(-34), sy(hitchW)); ctx.lineTo(sx(34), sy(hitchW));
   ctx.stroke();
 
   /* mâchoires : toujours là, elles changent d'état, elles n'apparaissent pas */
@@ -685,27 +715,102 @@ function drawPlate(p){
     ctx.globalAlpha = a;
     ctx.textBaseline = 'alphabetic';
     ctx.fillStyle = bitten ? TOK.signal : TOK.text;
-    ctx.font = '700 28px "Space Mono", monospace';
-    ctx.fillText(Math.round(dropMM) + ' mm', sx(RG) + 26, py + 8);
+    const etroit = W < 900;
+    ctx.textAlign = etroit ? 'right' : 'left';
+    const cotX = etroit ? sx(RG) - 10 : sx(RG) + 26;
+    const cotY = etroit ? py - 16 : py + 8;
+    ctx.font = '700 ' + (etroit ? 22 : 28) + 'px "Space Mono", monospace';
+    ctx.fillText(Math.round(dropMM) + ' mm', cotX, cotY);
     ctx.fillStyle = rgba(TOK.muted, 0.9);
     ctx.font = '400 10px "Space Mono", monospace';
-    ctx.fillText(bitten ? 'SAFETY GEAR SET' : 'FREE FALL', sx(RG) + 26, py + 26);
+    ctx.fillText(bitten ? 'SAFETY GEAR SET' : 'FREE FALL', cotX, cotY + 15);
+    ctx.textAlign = 'left';
     /* la cote de chute */
     ctx.strokeStyle = rgba(TOK.muted, 0.4);
     ctx.lineWidth = 1;
+    if (W >= 900){
     ctx.beginPath();
     ctx.moveTo(sx(RG) + 14, sy(0)); ctx.lineTo(sx(RG) + 14, py);
     ctx.moveTo(sx(RG) + 8,  sy(0)); ctx.lineTo(sx(RG) + 20, sy(0));
     ctx.moveTo(sx(RG) + 8,  py);    ctx.lineTo(sx(RG) + 20, py);
     ctx.stroke();
+    }
     ctx.restore();
   }
 
-  /* ---------- l'aplomb structurel, seul emploi du bleu royal ---------- */
+  /* ---------- LA POULIE DE TRACTION ----------
+     Le signe le plus lisible de tout le dessin : une corde qui passe sur une
+     poulie en haut d'une gaine, c'est un ascenseur, sans un mot. */
+  const shY = sy(SHEAVE_Y), shR = 44*z;
+  if (shY > -shR*2 && shY < H + shR*2 && z < 2.2){
+    ctx.strokeStyle = rgba(TOK.line, 0.62);
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(sx(0), shY, shR, 0, Math.PI*2);
+    ctx.moveTo(sx(0) + shR*0.30, shY); ctx.arc(sx(0), shY, shR*0.30, 0, Math.PI*2);
+    ctx.moveTo(sx(-RG*0.62), shY - shR*1.5); ctx.lineTo(sx(RG*0.62), shY - shR*1.5);
+    ctx.moveTo(sx(-shR*0.5), shY - shR*1.5); ctx.lineTo(sx(-shR*0.5), shY);
+    ctx.moveTo(sx( shR*0.5), shY - shR*1.5); ctx.lineTo(sx( shR*0.5), shY);
+    ctx.stroke();
+  }
+
+  /* ---------- LES LÉGENDES DE PLANCHE ----------
+     Retour Dondi : le dessin était trop énigmatique. Une planche de brevet
+     nomme ses pièces, donc la nôtre les nomme. Le texte n'apparaît jamais en
+     opacité : il est révélé par la LONGUEUR de son trait de rappel, comme le
+     reste du film. */
+  const legende = (ax, ay, dx, label, t) => {
+    if (t <= 0.004) return;
+    const tipX = ax + dx*t, tipY = ay;
+    ctx.save();
+    ctx.strokeStyle = rgba(TOK.muted, 0.6);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(ax, ay); ctx.lineTo(tipX, tipY);
+    ctx.arc(ax, ay, 2.4, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.font = '400 11px "Space Mono", monospace';
+    ctx.textBaseline = 'middle';
+    const wTxt = ctx.measureText(label).width;
+    const shown = wTxt * Math.max(0, (t - 0.5)/0.5);
+    if (shown > 1){
+      const pad = dx > 0 ? 7 : -7;
+      const x0 = dx > 0 ? tipX + pad : tipX + pad - wTxt;
+      ctx.beginPath();
+      ctx.rect(dx > 0 ? x0 : x0 + wTxt - shown, tipY - 9, shown, 18);
+      ctx.clip();
+      ctx.fillStyle = rgba(TOK.muted, 0.92);
+      ctx.fillText(label, x0, tipY);
+    }
+    ctx.restore();
+  };
+
+  /* groupe 01 : ce qu'on regarde. Sort avant la plongée dans la corde. */
+  const tA = seg(p,0.012,0.055) * (1 - seg(p,0.085,0.115));
+  if (tA > 0.004 && z < 2.2){
+    legende(sx(0) + shR*0.8, shY, 78, 'SHEAVE', tA);
+    legende(sx(2), sy(-250), 92, 'HOIST ROPE', tA);
+    /* a 540 px la marge gauche ne tient pas 'GUIDE RAIL' : on bascule sur le rail droit. */
+    /* En etroit le libelle deborderait des deux cotes : on le rentre DANS la
+       gaine, ou il y a 300 px de libres. */
+    if (sx(-RG) > 118) legende(sx(-RG), sy(-170), -84, 'GUIDE RAIL', tA);
+    else               legende(sx(-RG), sy(-170),  54, 'GUIDE RAIL', tA);
+    legende(sx(RG*0.86), sy(platY - CAR_H*0.55), 74, 'CAR', tA);
+  }
+  /* groupe 02 : la pièce qui vient d'agir, au moment où elle agit. */
+  const tB = seg(p,0.415,0.455) * (1 - seg(p,0.545,0.575));
+  if (tB > 0.004 && z < 2.2 && W >= 900){
+    legende(sx(-RG + 10), py, -96, 'SAFETY GEAR', tB);
+  }
+
+  /* ---------- l'axe de chute, seul emploi du bleu royal ----------
+     Il partait du haut et se superposait a la corde, qui paraissait bleue sur
+     sa moitie haute. Il descend maintenant SOUS la cabine : c'est la ligne le
+     long de laquelle elle tomberait, et elle ne teinte plus rien d'autre. */
   ctx.strokeStyle = rgba(TOK.accent, 0.85);
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(sx(0), 0); ctx.lineTo(sx(0), Math.max(0, sy(CUT_Y)));
+  ctx.moveTo(sx(0), py + 18*z); ctx.lineTo(sx(0), H);
   ctx.stroke();
 }
 
