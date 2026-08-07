@@ -893,14 +893,24 @@ document.getElementById('cut').addEventListener('click', function(){
 /* ============================================================
    Montage : Lenis + une seule timeline, un seul pin.
    ============================================================ */
+let lenis = null;
 gsap.registerPlugin(ScrollTrigger);
 
 if (!REDUCED && window.Lenis){
-  const lenis = new Lenis({ lerp: 0.08 });
+  lenis = new Lenis({ lerp: 0.08 });
   lenis.on('scroll', ScrollTrigger.update);
   gsap.ticker.add(t => lenis.raf(t*1000));
   gsap.ticker.lagSmoothing(0);
 }
+
+/* Convention du pipeline : les outils de capture et de QC appellent
+   window.captureMode() avant de scroller. Lenis lisse le defilement, donc il se
+   bat avec un window.scrollTo pilote : on le coupe et ScrollTrigger reprend la
+   main sur le scroll natif. Le film reste identique, seule l'inertie disparait. */
+window.captureMode = function(){
+  if (lenis && lenis.destroy) { lenis.destroy(); lenis = null; }
+  ScrollTrigger.refresh();
+};
 
 const FRAMES = 1000;
 const playhead = { f: 0 };
