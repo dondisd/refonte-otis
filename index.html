@@ -444,7 +444,8 @@ const TOK = {
   muted:  css.getPropertyValue('--muted').trim()  || '#888780',
   accent: css.getPropertyValue('--accent').trim() || '#002C7B',
   signal: css.getPropertyValue('--signal').trim() || '#E11C16',
-  bg:     css.getPropertyValue('--bg').trim()     || '#0A0A0A'
+  bg:     css.getPropertyValue('--bg').trim()     || '#0A0A0A',
+  surface:css.getPropertyValue('--surface').trim()|| '#2C2C2A'
 };
 const hex2rgb = h => {
   h = h.replace('#','');
@@ -461,7 +462,7 @@ crowd.src = 'img/otis-1854.jpg';
 
 /* ---- géométrie du monde (px monde, origine = plateforme au repos) ---- */
 const RG_BASE   = 170;   // demi-écartement des rails (rétréci sur écran étroit)
-const CAR_H     = 132;   // hauteur de la cabine
+const CAR_H     = 188;   // hauteur de la cabine (préc. 132, trop petite en vidéo)
 const SHEAVE_Y  = -440;  // la poulie de traction, en haut de la gaine
 const PITCH_A   = 64;    // pas des crans, 1854
 const PITCH_B   = 22;    // pas des crans, aujourd'hui
@@ -506,15 +507,16 @@ function drawPlate(p){
   /* ---------- caméra ---------- */
   /* La caméra ressort AVANT la chute (0.30 → 0.40), sinon le visiteur ne voit
      jamais la plateforme tomber et le critère 3 devient invérifiable. */
-  const pullOut = seg(p,0.24,0.31);
-  let z = lerp(1, 5.6, seg(p,0.09,0.23));
+  const pullOut = seg(p,0.225,0.29);
+  let z = lerp(1, 3.4, seg(p,0.10,0.185));
   z = lerp(z, 1, pullOut);
   let focusY = lerp(0,-120,seg(p,0,0.09)) + lerp(0,-210,seg(p,0.09,0.23));
   focusY = lerp(focusY, 0, pullOut);
 
   /* Sur un écran étroit (la vidéo est capturée à 540), des rails à 170 px ne
      laissent plus la place aux légendes de planche. On resserre la gaine. */
-  const RG = Math.min(RG_BASE, W*0.31);
+  const RG = Math.min(RG_BASE, W*0.26);
+  const WALL = RG*1.42;   // parois de la gaine, en dehors des rails
 
   /* Au bureau le titre geant couvrait la gaine et ses legendes devenaient
      illisibles. La gaine se decale a droite : texte a gauche, dessin a droite,
@@ -564,10 +566,27 @@ function drawPlate(p){
   ctx.stroke();
 
   /* les deux rails */
-  ctx.strokeStyle = rgba(TOK.line, 0.58);
+  ctx.strokeStyle = rgba(TOK.line, 0.78);
+  ctx.lineWidth = 1.3;
   ctx.beginPath();
   ctx.moveTo(sx(-RG), -20); ctx.lineTo(sx(-RG), H+20);
   ctx.moveTo(sx( RG), -20); ctx.lineTo(sx( RG), H+20);
+  ctx.stroke();
+
+  /* LES PAROIS DE LA GAINE : c'est elles qui font lire une CAGE plutôt que
+     deux câbles dans le vide. Hachures courtes, comme une coupe de plan. */
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = rgba(TOK.line, 0.34);
+  ctx.beginPath();
+  ctx.moveTo(sx(-WALL), -20); ctx.lineTo(sx(-WALL), H+20);
+  ctx.moveTo(sx( WALL), -20); ctx.lineTo(sx( WALL), H+20);
+  ctx.stroke();
+  ctx.strokeStyle = rgba(TOK.line, 0.20);
+  ctx.beginPath();
+  for (let y = -30; y < H+30; y += 26){
+    ctx.moveTo(sx(-WALL), y);      ctx.lineTo(sx(-WALL) - 11, y + 11);
+    ctx.moveTo(sx( WALL), y);      ctx.lineTo(sx( WALL) + 11, y + 11);
+  }
   ctx.stroke();
 
   /* les crans, plus les plaques de plancher tous les huit */
@@ -661,11 +680,15 @@ function drawPlate(p){
      ascenseur. On dessine une vraie cabine, parois, plafond et baie de porte :
      la silhouette suffit à nommer l'objet avant le moindre mot. */
   const py = sy(platY);
-  const cw = RG*0.86, ch = CAR_H;
+  const cw = RG*0.92, ch = CAR_H;
   const roofY = sy(platY - ch);
 
-  ctx.strokeStyle = rgba(TOK.text, 0.82);
-  ctx.lineWidth = 1.4;
+  /* le corps de la cabine, rempli : sans matière elle disparaissait sur la
+     gravure de 1854 qui passe derrière. */
+  ctx.fillStyle = rgba(TOK.surface, 0.62);
+  ctx.fillRect(sx(-cw), roofY, sx(cw)-sx(-cw), py - roofY);
+  ctx.strokeStyle = rgba(TOK.text, 0.98);
+  ctx.lineWidth = 1.9;
   ctx.beginPath();
   ctx.moveTo(sx(-cw), py);      ctx.lineTo(sx(cw), py);            // plancher
   ctx.moveTo(sx(-cw), roofY);   ctx.lineTo(sx(cw), roofY);         // plafond
@@ -717,8 +740,8 @@ function drawPlate(p){
     ctx.fillStyle = bitten ? TOK.signal : TOK.text;
     const etroit = W < 900;
     ctx.textAlign = etroit ? 'right' : 'left';
-    const cotX = etroit ? sx(RG) - 10 : sx(RG) + 26;
-    const cotY = etroit ? py - 16 : py + 8;
+    const cotX = etroit ? sx(RG*0.92) : sx(RG) + 26;
+    const cotY = etroit ? sy(platY - CAR_H) - 14 : py + 8;
     ctx.font = '700 ' + (etroit ? 22 : 28) + 'px "Space Mono", monospace';
     ctx.fillText(Math.round(dropMM) + ' mm', cotX, cotY);
     ctx.fillStyle = rgba(TOK.muted, 0.9);
@@ -793,7 +816,7 @@ function drawPlate(p){
     /* a 540 px la marge gauche ne tient pas 'GUIDE RAIL' : on bascule sur le rail droit. */
     /* En etroit le libelle deborderait des deux cotes : on le rentre DANS la
        gaine, ou il y a 300 px de libres. */
-    if (sx(-RG) > 118) legende(sx(-RG), sy(-170), -84, 'GUIDE RAIL', tA);
+    if (sx(-RG) > 175) legende(sx(-RG), sy(-170), -84, 'GUIDE RAIL', tA);
     else               legende(sx(-RG), sy(-170),  54, 'GUIDE RAIL', tA);
     legende(sx(RG*0.86), sy(platY - CAR_H*0.55), 74, 'CAR', tA);
   }
